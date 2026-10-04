@@ -13,6 +13,7 @@ Panel {
   readonly property string webUi: "http://127.0.0.1:9898"
   property var info: ({})
   property real now: Date.now() / 1000
+  property var palette: ({})
 
   readonly property bool serviceUp: info.service === "active"
   readonly property bool running: info.running === "1"
@@ -27,6 +28,30 @@ Panel {
     if (stale) return "Kein aktuelles Backup"
     if (info.last_status === "warning") return "Backup mit Warnungen"
     return "Backups sind aktuell"
+  }
+
+  // Icon state: running spins, ok is green, warnings yellow, failures pulse red.
+  readonly property string iconState: {
+    if (info.service === undefined) return "loading"
+    if (running) return "running"
+    if (!serviceUp || failed) return "error"
+    if (stale || info.last_status === "warning") return "warning"
+    return "ok"
+  }
+  readonly property color iconColor: {
+    var fg = bar ? bar.barForeground : Color.foreground
+    if (iconState === "running") return Color.accent
+    if (iconState === "ok") return themeColor("green", "#8fbf6a")
+    if (iconState === "warning") return themeColor("yellow", "#e5c07b")
+    if (iconState === "error") return themeColor("red", Color.urgent)
+    return fg
+  }
+  function themeColor(name, fallback) { return palette[name] || fallback }
+  // Pop the icon once when a running backup finishes cleanly.
+  property string prevIconState: ""
+  onIconStateChanged: {
+    if (iconState === "ok" && prevIconState === "running") donePulse.restart()
+    prevIconState = iconState
   }
 
   implicitWidth: button.implicitWidth
@@ -83,18 +108,63 @@ Panel {
     stdout: StdioCollector { id: output; waitForEnd: true }
     onExited: root.parseOutput(output.text)
   }
-  Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
+  FileView {
+    path: Color.currentThemePath + "/colors.toml"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      var next = {}
+      var re = /^\s*(\w+)\s*=\s*"(#[0-9a-fA-F]{6,8})"/gm, m
+      var t = text()
+      while ((m = re.exec(t)) !== null) next[m[1]] = m[2]
+      root.palette = next
+    }
+  }
+  // Poll faster while a backup runs so the spinner stops promptly.
+  Timer { interval: root.running ? 5000 : 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
 
   WidgetButton {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.running ? "󰁯 …" : (root.problem ? "󰁯 !" : "󰁯")
-    active: root.problem && !root.running
-    dimmed: root.info.service === undefined
+    text: "󰁯"
+    labelVisible: false
+    dimmed: root.iconState === "loading"
     horizontalMargin: 7.5
     tooltipText: root.headline + " · letztes " + root.ago(root.info.last_ok)
     onPressed: function(b) { if (b === Qt.RightButton) root.refresh(); else root.toggle() }
+
+    Text {
+      id: icon
+      anchors.centerIn: parent
+      text: "󰁯"
+      textFormat: Text.PlainText
+      color: root.iconColor
+      font.family: button.fontFamily
+      font.pixelSize: button.fontSize
+      renderType: Text.NativeRendering
+      Behavior on color { ColorAnimation { duration: 300 } }
+
+      RotationAnimation on rotation {
+        running: root.iconState === "running"
+        loops: Animation.Infinite
+        from: 360; to: 0
+        duration: 1400
+        onRunningChanged: if (!running) icon.rotation = 0
+      }
+      SequentialAnimation on opacity {
+        running: root.iconState === "error"
+        loops: Animation.Infinite
+        NumberAnimation { to: 0.35; duration: 900; easing.type: Easing.InOutSine }
+        NumberAnimation { to: 1; duration: 900; easing.type: Easing.InOutSine }
+        onRunningChanged: if (!running) icon.opacity = 1
+      }
+      SequentialAnimation {
+        id: donePulse
+        NumberAnimation { target: icon; property: "scale"; to: 1.4; duration: 180; easing.type: Easing.OutCubic }
+        NumberAnimation { target: icon; property: "scale"; to: 1; duration: 420; easing.type: Easing.OutBack }
+      }
+    }
   }
 
   KeyboardPanel {

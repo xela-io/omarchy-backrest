@@ -3,10 +3,13 @@
 An Omarchy bar widget that shows the state of your
 [Backrest](https://github.com/garethgeorge/backrest) (restic) backups.
 
-- `󰁯` — last backup succeeded and is recent.
-- `󰁯 …` — a backup is running.
-- `󰁯 !` (urgent color) — the last run failed, the last successful backup is
-  older than 3 hours, or `backrest.service` is not running.
+The icon uses your theme's colors:
+
+- **green** — last backup succeeded and is recent.
+- **spinning** (accent color) — a backup is running; it pops once when done.
+- **yellow** — the last successful backup is older than 3 hours, or the last
+  run finished with warnings.
+- **red, pulsing** — the last run failed or `backrest.service` is not running.
 - The tooltip shows a one-line summary.
 - Left-click opens a popup with schedule, last run details (duration, data
   added, files) and buttons to open the Backrest web UI or refresh.
