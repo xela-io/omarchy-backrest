@@ -11,7 +11,7 @@
   "entryPoints": { "barWidget": "BarWidget.qml" },
   "barWidget": {
     "displayName": "Backrest",
-    "description": "Last backup status; click opens the Backrest web UI",
+    "description": "Last backup status; click opens a details popup",
     "category": "System",
     "allowMultiple": false,
     "defaultSection": "right"

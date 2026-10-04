@@ -7,9 +7,9 @@ An Omarchy bar widget that shows the state of your
 - `󰁯 …` — a backup is running.
 - `󰁯 !` (urgent color) — the last run failed, the last successful backup is
   older than 3 hours, or `backrest.service` is not running.
-- The tooltip shows the last successful backup, the next scheduled run and
-  any error message.
-- Left-click opens the Backrest web UI (`http://127.0.0.1:9898`).
+- The tooltip shows a one-line summary.
+- Left-click opens a popup with schedule, last run details (duration, data
+  added, files) and buttons to open the Backrest web UI or refresh.
 - Right-click refreshes immediately; otherwise it refreshes every 30 seconds.
 
 The widget reads Backrest's operation log
